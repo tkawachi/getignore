@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+
+import httplib
+import json
+import os
+import sys
+
+EXIT_FAILURE = 2
+
+
+def print_usage_exit(langs):
+    print "Usage: %s lang" % sys.argv[0]
+    print "Available languages: %s" % ', '.join(langs)
+    sys.exit(EXIT_FAILURE)
+
+
+def fetch_lang_list():
+    """Fetch language list from Github
+    """
+    conn = httplib.HTTPSConnection("api.github.com")
+    conn.request("GET", "/gitignore/templates")
+    resp = conn.getresponse()
+    if resp.status != 200:
+        raise resp.reason
+    return json.loads(resp.read())
+
+
+def search_lang(langs, query):
+    """Search lang from lang_list.
+    Returns list of matched languages.
+    """
+    exact_matches = [lang for lang in langs if lang.lower() == query.lower()]
+    if len(exact_matches) > 0:
+        return [exact_matches[0]]
+    return [lang for lang in langs if lang.lower().find(query.lower()) >= 0]
+
+
+def fetch_gitignore(lang):
+    """Fetch .gitignore for given lang and save it in .gitignore
+    """
+    print "Fetching .gitignore for %s" % lang
+    conn = httplib.HTTPSConnection("api.github.com")
+    conn.request("GET", "/gitignore/templates/%s" % lang)
+    resp = conn.getresponse()
+    if resp.status != 200:
+        raise resp.reason
+    parsed = json.loads(resp.read())
+    f = open('.gitignore', 'w')
+    f.write(parsed['source'])
+    f.close()
+
+
+if __name__ == '__main__':
+    if os.path.exists(".gitignore"):
+        print ".gitignore already exists. Skipped."
+        sys.exit(EXIT_FAILURE)
+    langs = fetch_lang_list()
+    if len(sys.argv) != 2:
+        print_usage_exit(langs)
+    query = sys.argv[1]
+    candidate_langs = search_lang(langs, query)
+    if len(candidate_langs) == 0:
+        print "%s is unavailable" % query
+        print_usage_exit(langs)
+    elif len(candidate_langs) == 1:
+        fetch_gitignore(candidate_langs[0])
+    else:
+        print "Please choose language from %s" % ', '.join(candidate_langs)
+        sys.exit(2)
