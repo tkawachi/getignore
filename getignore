@@ -38,6 +38,7 @@ def search_lang(langs, query):
 def fetch_gitignore(lang):
     """Fetch .gitignore for given lang and save it in .gitignore
     """
+    check_file_existence()
     print "Fetching .gitignore for %s" % lang
     conn = httplib.HTTPSConnection("api.github.com")
     conn.request("GET", "/gitignore/templates/%s" % lang)
@@ -50,10 +51,13 @@ def fetch_gitignore(lang):
     f.close()
 
 
-if __name__ == '__main__':
+def check_file_existence():
     if os.path.exists(".gitignore"):
         print ".gitignore already exists. Skipped."
         sys.exit(EXIT_FAILURE)
+
+
+if __name__ == '__main__':
     langs = fetch_lang_list()
     if len(sys.argv) != 2:
         print_usage_exit(langs)
